@@ -12,3 +12,4 @@
 *.out
 .idea/
 /examples/database/database
+/examples/cache/cache
