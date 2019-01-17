@@ -1,0 +1,33 @@
+all line before ; and after # are comments
+
+;beginBlock
+:argument param1 param2
+#endBlock
+
+contexts below
+
+;contexts
+:ctx
+:ctxAdmin
+#contexts
+
+some comment!
+;routers
+:router ctx /
++middleware logger
++middleware tester
+get /login login
+
+:logout ctx /logout
++middleware ctx.auth
+get / logout
+
+:api ctx /api
++middleware ctx.auth
+get /user/get userGet
+post /user/update userUpdate
+get /post/:id postGet
+get /posts postList
+post /post/update/:id postUpdate
+#routers
+
