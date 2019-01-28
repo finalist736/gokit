@@ -9,24 +9,8 @@ import (
 	"text/template"
 )
 
-var (
-	emptProjectFileData = `
-;contexts
-:ctx
-#contexts
-
-;routers
-:router ctx /
-+middleware logger
-
-#routers
-
-`
-	projectFileName = "./project.gkm"
-)
-
 func printUsage(gkmBinary string) {
-	fmt.Printf("Usage:\n%s create\tCreate project\n", gkmBinary)
+	fmt.Printf("Usage:\n%s new\tCreate dummy project\n", gkmBinary)
 	return
 }
 
@@ -46,35 +30,7 @@ func main() {
 	default:
 		printUsage(gkmBinary)
 		return
-	case "create":
-		var err error
-		var file *os.File
-		fmt.Println("create empty project")
-		if _, err = os.Stat(projectFileName); !os.IsNotExist(err) {
-			var yesno string
-			fmt.Printf("file %s already exists, do you want rewtite it?[y/N] ", projectFileName)
-			fmt.Scanf("%s", &yesno)
-			if yesno == "n" || yesno == "N" || yesno == "" {
-				fmt.Printf("skip\n")
-				return
-			}
-		}
-		file, err = os.OpenFile(projectFileName, os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			fmt.Printf("can't create file: %s\n", err)
-			return
-		}
-		_, err = file.WriteString(emptProjectFileData)
-		if err != nil {
-			fmt.Printf("can't write file: %s\n", err)
-			return
-		}
-		err = file.Close()
-		if err != nil {
-			fmt.Printf("can't close file: %s\n", err)
-			return
-		}
-	case "gen":
+	case "new":
 		var (
 			err  error
 			file *os.File
@@ -105,7 +61,7 @@ func main() {
 
 		// files templates
 		// service/main.go
-		file, err = os.OpenFile(mainServiceFile, os.O_CREATE|os.O_WRONLY, 0644)
+		file, err = os.OpenFile(mainServiceFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 		if err != nil {
 			fmt.Printf("can't create %s file: %s\n", mainServiceFile, err)
 			return
@@ -119,7 +75,7 @@ func main() {
 		tpl.Execute(file, &mainFileData{ProjectPath: projectPath})
 		file.Close()
 		// router file
-		file, err = os.OpenFile(routerFile, os.O_CREATE|os.O_WRONLY, 0644)
+		file, err = os.OpenFile(routerFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 		if err != nil {
 			fmt.Printf("can't create %s file: %s\n", routerFile, err)
 			return
@@ -135,7 +91,7 @@ func main() {
 		file.Close()
 
 		// context file
-		file, err = os.OpenFile(contextFile, os.O_CREATE|os.O_WRONLY, 0644)
+		file, err = os.OpenFile(contextFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 		if err != nil {
 			fmt.Printf("can't create %s file: %s\n", contextFile, err)
 			return
@@ -149,7 +105,7 @@ func main() {
 		file.Close()
 
 		// index handler file
-		file, err = os.OpenFile(indexFile, os.O_CREATE|os.O_WRONLY, 0644)
+		file, err = os.OpenFile(indexFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 		if err != nil {
 			fmt.Printf("can't create %s file: %s\n", indexFile, err)
 			return
@@ -162,6 +118,19 @@ func main() {
 		tpl.Execute(file, &mainFileData{ProjectPath: projectPath})
 		file.Close()
 
+		// config.ini file
+		file, err = os.OpenFile(configINIFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+		if err != nil {
+			fmt.Printf("can't create %s file: %s\n", configINIFile, err)
+			return
+		}
+		tpl, err = template.New("config").Parse(configIniTpl)
+		if err != nil {
+			fmt.Printf("can't parse %s file: %s\n", configINIFile, err)
+			return
+		}
+		tpl.Execute(file, &mainFileData{ProjectPath: projectPath})
+		file.Close()
 	}
 
 }
@@ -190,7 +159,18 @@ var (
 	routerFile      = path.Join(directories[0], "router.go")
 	contextFile     = path.Join(directories[3], "context.go")
 	indexFile       = path.Join(directories[7], "index.go")
+	configINIFile   = "config.ini"
 
+	configIniTpl = `# base config file
+port=:8081
+# logtype may be std|file|socket
+logtype=std
+#logpath where logs are. using only where file or socket
+logpath=.
+loglevel=debug
+defaultdb=root@tcp(localhost:3306)/test
+
+`
 
 	indexGoTpl = `package index
 
@@ -246,6 +226,11 @@ func Create() *web.Router {
 	router := web.New(ctx.Ctx{})
 	router.Middleware((*ctx.Ctx).Init).Middleware((*ctx.Ctx).Cors)
 	router.Get("/", index.Index)
+
+// GKM INSERT ROUTER
+// DO NOT REMOVE THESE COMMENT LINE!!!
+// GKM WILL INSERT NEW ROUTERS ABOVE THIS LINES
+
 
 	return router
 }
